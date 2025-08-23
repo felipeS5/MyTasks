@@ -4,7 +4,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -316,8 +318,18 @@ fun TaskColumn(
     onRestoreTask: ((Task) -> Unit)? = null,
     showDeleteIcon: Boolean = false,
     showRestoreIcon: Boolean = false,
-    showCheckbox: Boolean = true
+    showCheckbox: Boolean = true,
+    autoScrollToEnd: Boolean = false
 ) {
+    val listState = rememberLazyListState()
+
+    // Se for histórico, rola até o fim quando abrir
+    LaunchedEffect(autoScrollToEnd, tasks.size) {
+        if (autoScrollToEnd && tasks.isNotEmpty()) {
+            listState.scrollToItem(tasks.lastIndex)
+        }
+    }
+
     Column(
         modifier = modifier
             .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
@@ -327,7 +339,10 @@ fun TaskColumn(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(title, style = MaterialTheme.typography.h6, modifier = Modifier.padding(8.dp))
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            state = listState
+        ) {
             items(tasks) { task ->
                 TaskRow(
                     task = task,
@@ -368,37 +383,38 @@ fun TaskRow(
         else -> "" to false
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(4.dp)
-    ) {
-        if (showCheckbox) {
-            Checkbox(
-                checked = task.check.value,
-                onCheckedChange = {
-                    task.check.value = it
-                    onCheckChange(task)
-                }
-            )
-            Spacer(Modifier.width(8.dp))
-        }
-
-        Text(
-            task.title + suffix,
-            color = if (isToday) Color.Red else Color.Black,
-            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-            modifier = Modifier.weight(1f)
-        )
-
-        if (showDeleteIcon && onDelete != null) {
-            IconButton(onClick = { showConfirm = true }) {
-                Icon(Icons.Filled.Delete, contentDescription = "Deletar")
+    SelectionContainer {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(4.dp)
+        ) {
+            if (showCheckbox) {
+                Checkbox(
+                    checked = task.check.value,
+                    onCheckedChange = {
+                        task.check.value = it
+                        onCheckChange(task)
+                    }
+                )
+                Spacer(Modifier.width(8.dp))
             }
-        }
 
-        if (showRestoreIcon && onRestore != null) {
-            IconButton(onClick = { showConfirm = true }) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Restaurar")
+            Text(
+                task.title + suffix,
+                color = if (isToday) Color.Red else Color.Black,
+                modifier = Modifier.weight(1f)
+            )
+
+            if (showDeleteIcon && onDelete != null) {
+                IconButton(onClick = { showConfirm = true }) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Deletar")
+                }
+            }
+
+            if (showRestoreIcon && onRestore != null) {
+                IconButton(onClick = { showConfirm = true }) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Restaurar")
+                }
             }
         }
     }
@@ -522,7 +538,8 @@ fun HistoryDialog(
                     },
                     showDeleteIcon = false,
                     showRestoreIcon = true,
-                    showCheckbox = false
+                    showCheckbox = false,
+                    autoScrollToEnd = true
                 )
                 TaskColumn(
                     title = "Lembretes Concluídos",
@@ -540,7 +557,8 @@ fun HistoryDialog(
                     },
                     showDeleteIcon = false,
                     showRestoreIcon = true,
-                    showCheckbox = false
+                    showCheckbox = false,
+                    autoScrollToEnd = true
                 )
             }
         },
