@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -184,7 +185,12 @@ fun App() {
     var showAddDialog by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
 
-    MaterialTheme {
+    MaterialTheme(
+        colors = lightColors(
+            primary = Color(0xff1077c9),
+            secondary = Color(0xff008eff)
+        )
+    ) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -202,6 +208,22 @@ fun App() {
             Spacer(Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxSize()) {
+                // Agendadas
+                TaskColumn(
+                    title = "Tarefas Agendadas",
+                    tasks = tasksState.filter { it.type is TaskType.Scheduled }
+                        .sortedBy { (it.type as TaskType.Scheduled).date },
+                    onTaskCheckedChange = { task -> handleTaskCompletion(task, tasksState) },
+                    onDeleteTask = { task ->
+                        tasksState.remove(task)
+                        saveTasks("scheduled.json", tasksState.filter { it.type is TaskType.Scheduled })
+                    },
+                    modifier = Modifier.weight(1f).padding(8.dp),
+                    showDeleteIcon = true,
+                    showRestoreIcon = false,
+                    bgColor = Color(0xffe5f4ff)
+                )
+
                 // Diárias
                 TaskColumn(
                     title = "Tarefas Diárias",
@@ -216,22 +238,8 @@ fun App() {
                     },
                     modifier = Modifier.weight(1f).padding(8.dp),
                     showDeleteIcon = true,   // habilitei delete
-                    showRestoreIcon = false
-                )
-
-                // Agendadas
-                TaskColumn(
-                    title = "Tarefas Agendadas",
-                    tasks = tasksState.filter { it.type is TaskType.Scheduled }
-                        .sortedBy { (it.type as TaskType.Scheduled).date },
-                    onTaskCheckedChange = { task -> handleTaskCompletion(task, tasksState) },
-                    onDeleteTask = { task ->
-                        tasksState.remove(task)
-                        saveTasks("scheduled.json", tasksState.filter { it.type is TaskType.Scheduled })
-                    },
-                    modifier = Modifier.weight(1f).padding(8.dp),
-                    showDeleteIcon = true,
-                    showRestoreIcon = false
+                    showRestoreIcon = false,
+                    bgColor = Color(0xffe5ffec)
                 )
 
                 // Lembretes
@@ -246,7 +254,8 @@ fun App() {
                     },
                     modifier = Modifier.weight(1f).padding(8.dp),
                     showDeleteIcon = true,
-                    showRestoreIcon = false
+                    showRestoreIcon = false,
+                    bgColor = Color(0xffffe5e5)
                 )
             }
         }
@@ -319,7 +328,8 @@ fun TaskColumn(
     showDeleteIcon: Boolean = false,
     showRestoreIcon: Boolean = false,
     showCheckbox: Boolean = true,
-    autoScrollToEnd: Boolean = false
+    autoScrollToEnd: Boolean = false,
+    bgColor: Color = Color(0xFFEFEFEF)
 ) {
     val listState = rememberLazyListState()
 
@@ -335,7 +345,7 @@ fun TaskColumn(
             .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
             .border(0.01.dp, Color.LightGray, RoundedCornerShape(16.dp))
-            .background(Color(0xFFEFEFEF)),
+            .background(bgColor),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(title, style = MaterialTheme.typography.h6, modifier = Modifier.padding(8.dp))
@@ -448,7 +458,7 @@ fun TaskRow(
 @Composable
 fun AddTaskDialog(onAdd: (Task) -> Unit, onDismiss: () -> Unit) {
     var title by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf("Diária") }
+    var selectedType by remember { mutableStateOf("Agendada") }
     var dateText by remember { mutableStateOf(LocalDate.now().format(BR)) }
     var typeMenuOpen by remember { mutableStateOf(false) }
 
@@ -473,8 +483,8 @@ fun AddTaskDialog(onAdd: (Task) -> Unit, onDismiss: () -> Unit) {
                             expanded = typeMenuOpen,
                             onDismissRequest = { typeMenuOpen = false }
                         ) {
-                            DropdownMenuItem(onClick = { selectedType = "Diária"; typeMenuOpen = false }) { Text("Diária") }
                             DropdownMenuItem(onClick = { selectedType = "Agendada"; typeMenuOpen = false }) { Text("Agendada") }
+                            DropdownMenuItem(onClick = { selectedType = "Diária"; typeMenuOpen = false }) { Text("Diária") }
                             DropdownMenuItem(onClick = { selectedType = "Lembrete"; typeMenuOpen = false }) { Text("Lembrete") }
                         }
                     }
@@ -494,8 +504,8 @@ fun AddTaskDialog(onAdd: (Task) -> Unit, onDismiss: () -> Unit) {
             Button(onClick = {
                 if (title.isNotBlank()) {
                     val task = when (selectedType) {
-                        "Diária" -> Task(title, TaskType.Daily)
                         "Agendada" -> Task(title, TaskType.Scheduled(LocalDate.parse(dateText, BR)))
+                        "Diária" -> Task(title, TaskType.Daily)
                         else -> Task(title, TaskType.Reminder(LocalDate.parse(dateText, BR)))
                     }
                     onAdd(task)
